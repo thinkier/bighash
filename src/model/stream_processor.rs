@@ -21,25 +21,33 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
         }
     }
 
-    pub async fn digest(mut self, print_live: bool) -> tokio::io::Result<MerkleTree> {
+    pub async fn digest(mut self, name: &str, print_live: bool) -> tokio::io::Result<MerkleTree> {
         let mut hashes = vec![];
         let mut handles: Vec<JoinHandle<String>> = Vec::with_capacity(CONCURRENCY_LIMIT);
         let mut read = BufReader::new(&mut self.stream);
 
+        let mut i = 0;
         'stream: loop {
-            // Backpressure protection system
-            if handles.len() == CONCURRENCY_LIMIT {
-                for handle in std::mem::replace(&mut handles, Vec::with_capacity(CONCURRENCY_LIMIT)) {
-                    hashes.push(handle.await.unwrap());
-                }
-            }
-
             // Read persistence system
             let mut cur = 0;
             let mut buf = vec![0u8; BLOCK_SIZE];
 
             // Read (up to) a block
             'block: loop {
+                // Backpressure protection system turned logger-printer
+                if handles.len() >= CONCURRENCY_LIMIT {
+                    for handle in std::mem::replace(&mut handles, Vec::with_capacity(CONCURRENCY_LIMIT)) {
+                        let hash = handle.await.unwrap();
+
+                        if print_live {
+                            println!("{}\t{}\t:{}", hash, name, i);
+                        }
+
+                        hashes.push(hash);
+                        i += 1;
+                    }
+                }
+
                 let n = read.read(&mut buf[cur..BLOCK_SIZE]).await?;
 
                 if n == 0 && cur == 0 {

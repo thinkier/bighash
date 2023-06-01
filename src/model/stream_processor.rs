@@ -75,7 +75,14 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
         }
 
         for handle in handles {
-            hashes.push(handle.await.unwrap());
+            let hash = handle.await.unwrap();
+
+            if print_live {
+                println!("{}\t{}\t:{}", hash, name, i);
+            }
+
+            hashes.push(hash);
+            i += 1;
         }
 
         Ok(MerkleTree::from(hashes))

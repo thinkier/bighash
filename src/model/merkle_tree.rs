@@ -10,12 +10,14 @@ pub enum MerkleTree {
 impl MerkleTree {
     /// Create an unbalanced (left-aligned) merkle tree with the specified number of leaf nodes.
     pub fn with_size(leafs: usize) -> MerkleTree {
-        if leafs == 1 {
-            MerkleTree::Leaf { hash: String::new() }
-        } else {
-            let left = Box::new(MerkleTree::with_size(leafs / 2));
-            let right = Box::new(MerkleTree::with_size(leafs - (leafs / 2)));
-            MerkleTree::Node { left, right }
+        match leafs {
+            0 => panic!("Cannot create a Merkle tree with 0 leaf nodes"),
+            1 => MerkleTree::Leaf { hash: String::new() },
+            _ => {
+                let left = Box::new(MerkleTree::with_size(leafs / 2));
+                let right = Box::new(MerkleTree::with_size(leafs - (leafs / 2)));
+                MerkleTree::Node { left, right }
+            }
         }
     }
 

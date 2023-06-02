@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::mem;
 use tokio::io::{BufReader, AsyncRead, AsyncReadExt};
 use tokio::task::JoinHandle;
@@ -23,7 +24,7 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
 
     pub async fn digest(mut self, name: &str, print_live: bool) -> tokio::io::Result<MerkleTree> {
         let mut hashes = vec![];
-        let mut handles: Vec<JoinHandle<String>> = Vec::with_capacity(CONCURRENCY_LIMIT);
+        let mut handles: VecDeque<JoinHandle<String>> = VecDeque::with_capacity(CONCURRENCY_LIMIT);
         let mut read = BufReader::new(&mut self.stream);
 
         let mut i = 0;
@@ -36,7 +37,7 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
             'block: loop {
                 // Backpressure protection system turned logger-printer
                 if handles.len() >= CONCURRENCY_LIMIT {
-                    let handle = handles.remove(0);
+                    let handle = handles.pop_front().unwrap();
                     let hash = handle.await.unwrap();
 
                     if print_live {
@@ -60,7 +61,7 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
                 {
                     let buf = mem::replace(&mut buf, vec![0u8; BLOCK_SIZE]);
                     let len = cur + n;
-                    handles.push(tokio::task::spawn_blocking(move || {
+                    handles.push_back(tokio::task::spawn_blocking(move || {
                         let mut hasher = Sha256::new();
                         hasher.input(&buf[0..len]);
 

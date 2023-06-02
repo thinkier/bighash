@@ -17,9 +17,17 @@ async fn main() {
         print_tree(tree, "-").await;
     } else {
         for name in &cli_args.files {
-            let file = OpenOptions::new().read(true).write(false).open(Path::new(&name)).await.expect("Failed to open file");
+            let path = Path::new(&name);
+
+            if !path.is_file() {
+                continue;
+            }
+
+            let file = OpenOptions::new().read(true).write(false).open(path).await.expect("Failed to open file");
+
             let proc = StreamProcessor::new(file);
             let tree = proc.digest(name, print_live).await.unwrap();
+
             print_tree(tree, &name).await;
         }
     }

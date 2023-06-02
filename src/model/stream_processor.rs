@@ -51,9 +51,6 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
                 let n = read.read(&mut buf[cur..BLOCK_SIZE]).await?;
 
                 if n == 0 && cur == 0 {
-                    if i == 0 {
-                        return Ok(MerkleTree::Leaf { hash: Sha256::new().result_str() });
-                    }
                     break 'stream;
                 } else if cur + n < BLOCK_SIZE && n > 0 {
                     cur += n;
@@ -75,6 +72,10 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
                 }
                 cur = 0;
             }
+        }
+
+        if handles.is_empty() {
+            return Ok(MerkleTree::Leaf { hash: Sha256::new().result_str() });
         }
 
         for handle in handles {

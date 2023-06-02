@@ -36,16 +36,15 @@ impl<T: AsyncRead + Unpin> StreamProcessor<T> {
             'block: loop {
                 // Backpressure protection system turned logger-printer
                 if handles.len() >= CONCURRENCY_LIMIT {
-                    for handle in std::mem::replace(&mut handles, Vec::with_capacity(CONCURRENCY_LIMIT)) {
-                        let hash = handle.await.unwrap();
+                    let handle = handles.remove(0);
+                    let hash = handle.await.unwrap();
 
-                        if print_live {
-                            println!("{}\t{}\t:{}", hash, name, i);
-                        }
-
-                        hashes.push(hash);
-                        i += 1;
+                    if print_live {
+                        println!("{}\t{}\t:{}", hash, name, i);
                     }
+
+                    hashes.push(hash);
+                    i += 1;
                 }
 
                 let n = read.read(&mut buf[cur..BLOCK_SIZE]).await?;
